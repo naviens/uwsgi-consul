@@ -320,9 +320,17 @@ static void consul_setup() {
                     if (uwsgi_buffer_append_json(ucs->ub, ucs->address, strlen(ucs->address))) goto error;
                 }
 
-		if (uwsgi_buffer_append(ucs->ub, "\",\"Check\":{\"TTL\":\"", 18)) goto error;
+		//if (uwsgi_buffer_append(ucs->ub, "\",\"Check\":{\"TTL\":\"", 18)) goto error;
+		//if (uwsgi_buffer_num64(ucs->ub, ucs->ttl)) goto error;
+		//if (uwsgi_buffer_append(ucs->ub, "s\"}", 3)) goto error;
+
+                if (uwsgi_buffer_append(ucs->ub, "\",\"Check\":{\"HTTP\":\"http://localhost:", 36)) goto error;
+                if (uwsgi_buffer_append_json(ucs->ub, ucs->port, strlen(ucs->port))) goto error;
+                if (uwsgi_buffer_append(ucs->ub, "/health\"", 8)) goto error;
+                if (uwsgi_buffer_append(ucs->ub, ",\"Interval\":\"", 13)) goto error;
 		if (uwsgi_buffer_num64(ucs->ub, ucs->ttl)) goto error;
 		if (uwsgi_buffer_append(ucs->ub, "s\"}", 3)) goto error;
+
 
 		// port ?
 		if (ucs->port) {
