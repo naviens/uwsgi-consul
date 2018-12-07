@@ -29,6 +29,7 @@ struct uwsgi_consul_service {
 	char *token;
 	char *ttl_string;
 	char *url;
+	char *http_check_url;
 	char *wait_workers_string;
 	int ttl;
 	int wait_workers;
@@ -254,6 +255,7 @@ static void consul_setup() {
 			"token", &ucs->token,
 			"ttl", &ucs->ttl_string,
 			"url", &ucs->url,
+			"http_check_url",&ucs->http_check_url,
 			"wait_workers", &ucs->wait_workers_string,
 		NULL)) {
 			uwsgi_log("[consul] unable to parse service: %s\n", usl->value);
@@ -319,18 +321,19 @@ static void consul_setup() {
                     if (uwsgi_buffer_append(ucs->ub, "\",\"Address\":\"", 13)) goto error;
                     if (uwsgi_buffer_append_json(ucs->ub, ucs->address, strlen(ucs->address))) goto error;
                 }
-
-		//if (uwsgi_buffer_append(ucs->ub, "\",\"Check\":{\"TTL\":\"", 18)) goto error;
-		//if (uwsgi_buffer_num64(ucs->ub, ucs->ttl)) goto error;
-		//if (uwsgi_buffer_append(ucs->ub, "s\"}", 3)) goto error;
-
-                if (uwsgi_buffer_append(ucs->ub, "\",\"Check\":{\"HTTP\":\"http://localhost:", 36)) goto error;
-                if (uwsgi_buffer_append_json(ucs->ub, ucs->port, strlen(ucs->port))) goto error;
-                if (uwsgi_buffer_append(ucs->ub, "/health\"", 8)) goto error;
-                if (uwsgi_buffer_append(ucs->ub, ",\"Interval\":\"", 13)) goto error;
-		if (uwsgi_buffer_num64(ucs->ub, ucs->ttl)) goto error;
-		if (uwsgi_buffer_append(ucs->ub, "s\"}", 3)) goto error;
-
+		// Use http check if http_check_url given else use TTL check
+		if (ucs->http_check_url) {
+			if (uwsgi_buffer_append(ucs->ub, "\",\"Check\":{\"HTTP\":\"", 19)) goto error;
+			if (uwsgi_buffer_append_json(ucs->ub, ucs->http_check_url, strlen(ucs->http_check_url))) goto error;
+			if (uwsgi_buffer_append(ucs->ub, "\",\"Interval\":\"", 14)) goto error;
+			if (uwsgi_buffer_num64(ucs->ub, ucs->ttl)) goto error;
+			if (uwsgi_buffer_append(ucs->ub, "s\"}", 3)) goto error;
+		}
+		else {
+			if (uwsgi_buffer_append(ucs->ub, "\",\"Check\":{\"TTL\":\"", 18)) goto error;
+			if (uwsgi_buffer_num64(ucs->ub, ucs->ttl)) goto error;
+			if (uwsgi_buffer_append(ucs->ub, "s\"}", 3)) goto error;
+		}
 
 		// port ?
 		if (ucs->port) {
