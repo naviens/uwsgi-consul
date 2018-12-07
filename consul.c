@@ -49,7 +49,12 @@ static size_t consul_debug(void *ptr, size_t size, size_t nmemb, void *data) {
 
 static void consul_loop(struct uwsgi_thread *ut) {
 	struct uwsgi_consul_service *ucs = (struct uwsgi_consul_service *) ut->data;
-	uwsgi_log("[consul] thread for register_url=%s check_url=%s name=%s id=%s started\n", ucs->register_url, ucs->check_url, ucs->name, ucs->id);
+	if (ucs->http_check_url) {
+		uwsgi_log("[consul] thread for register_url=%s name=%s id=%s started\n", ucs->register_url, ucs->name, ucs->id);
+	}
+	else {
+		uwsgi_log("[consul] thread for register_url=%s check_url=%s name=%s id=%s started\n", ucs->register_url, ucs->check_url, ucs->name, ucs->id);
+	}
 	if (ucs->wait_workers > 0 && uwsgi.numproc > 0) {
 		uwsgi_log_verbose("[consul] waiting for workers before registering service ...\n");
 		for(;;) {
@@ -131,6 +136,8 @@ static void consul_loop(struct uwsgi_thread *ut) {
 
 		for(;;) {
 			if (uconsul.deregistering) return;
+			//Dont register ttl check if http_check_url is provided
+			if (ucs->http_check_url) return;
 			// now call the pass check api
 			// initialize curl for the service check
 			ucs->curl = curl_easy_init();
